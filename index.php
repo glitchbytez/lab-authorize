@@ -66,6 +66,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = "Client decommissioned successfully.";
         }
     }
+
+    // 4. Create new user account
+    if (isset($_POST['action']) && $_POST['action'] === 'create_user') {
+        $name = trim($_POST['name']);
+        $role = trim($_POST['role']);
+        $lab = trim($_POST['lab']);
+        $password = trim($_POST['password']);
+
+        if (empty($name) || empty($role) || empty($password)) {
+            $error = 'All fields (Name, Role, Password) are required.';
+        } else {
+            // Check uniqueness of name
+            $exists = false;
+            foreach ($_SESSION['scientists'] as $sc) {
+                if (strtolower($sc['name']) === strtolower($name)) {
+                    $exists = true;
+                    break;
+                }
+            }
+            if ($exists) {
+                $error = "A specialist named '{$name}' is already rostered.";
+            } else {
+                // Generate a unique ID
+                $maxIdNum = 0;
+                foreach ($_SESSION['scientists'] as $sc) {
+                    if (preg_match('/(?:scientist|admin|user)-(\d+)/', $sc['id'], $matches)) {
+                        $num = (int)$matches[1];
+                        if ($num > $maxIdNum) {
+                            $maxIdNum = $num;
+                        }
+                    }
+                }
+                $newId = 'user-' . sprintf('%02d', $maxIdNum + 1);
+                
+                $_SESSION['scientists'][] = [
+                    'id' => $newId,
+                    'name' => $name,
+                    'role' => $role,
+                    'lab' => ($lab === '' || $lab === 'None') ? null : $lab,
+                    'password' => $password
+                ];
+                $success = "User account successfully registered and active.";
+            }
+        }
+    }
+
+    // 5. Delete user account
+    if (isset($_POST['action']) && $_POST['action'] === 'delete_user') {
+        $userId = $_POST['user_id'];
+        if ($_SESSION['user']['id'] === $userId) {
+            $error = "Security Policy Violation: You cannot delete your own active profile.";
+        } else {
+            $_SESSION['scientists'] = array_filter($_SESSION['scientists'], function($sc) use ($userId) {
+                return $sc['id'] !== $userId;
+            });
+            $_SESSION['scientists'] = array_values($_SESSION['scientists']);
+            $success = "User account decommissioned successfully.";
+        }
+    }
 }
 
 // B. Route Selection
