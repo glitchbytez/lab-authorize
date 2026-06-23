@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (strtolower($sc['name']) === strtolower($username) || strtolower($sc['id']) === strtolower($username)) {
                 if ($sc['password'] === $password) {
                     $_SESSION['user'] = $sc;
-                    header("Location: index.php?page=queue");
+                    header("Location: index.php?page=pending");
                     exit;
                 }
             }
@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // B. Route Selection
-$currentPage = isset($_GET['page']) ? $_GET['page'] : 'login';
+$currentPage = isset($_GET['page']) ? $_GET['page'] : 'pending';
 if (!isset($_SESSION['user'])) {
     $currentPage = 'login';
 }
@@ -92,9 +92,6 @@ if ($currentPage === 'login') {
 
     // Page selection
     switch ($currentPage) {
-        case 'queue':
-            include 'views/test_queue.php';
-            break;
         case 'pending':
             include 'views/pending_auth.php';
             break;
@@ -105,7 +102,7 @@ if ($currentPage === 'login') {
             include 'views/admin.php';
             break;
         default:
-            include 'views/test_queue.php';
+            include 'views/pending_auth.php';
     }
 
     echo '</main></div></body></html>';
