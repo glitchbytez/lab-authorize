@@ -1,9 +1,3 @@
-<?php
-require_once 'data.php';
-
-// Find initial active completed details
-$activeRecord = $completedRecords[0];
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,12 +16,12 @@ $activeRecord = $completedRecords[0];
 <div id="completed-records-view" class="flex flex-col xl:flex-row h-screen overflow-hidden">
 
     <!-- Left Pane: Grid Table of Completed Files -->
-    <div class="flex-1 overflow- flex flex-col min-w-0 bg-white border-r border-[#BED1E0] h-full">
+    <div class="flex-1 flex flex-col min-w-0 bg-white border-r border-[#BED1E0] h-full">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between select-none shrink-0 bg-[#FCFDFE]">
             <h2 class="font-bold text-gray-800 text-[16px]">Completed Data Results</h2>
-            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 rounded-full py-0.5">
-                    <?= count($completedRecords) ?> completed
-                </span>
+            <span id="completed-count-badge" class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 rounded-full py-0.5">
+                0 completed
+            </span>
         </div>
 
         <div class="flex-1 overflow-auto">
@@ -42,32 +36,12 @@ $activeRecord = $completedRecords[0];
                     <th class="px-4 py-3">Date/Time</th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 select-none">
-                <?php foreach($completedRecords as $idx => $rec):
-                    $isRejected = ($rec['status'] === 'Rejected');
-                    ?>
-                    <tr class="cursor-pointer transition-all patient-row <?= $idx === 0 ? 'bg-[#E3EFF7] font-semibold text-blue-950 shadow-inner' : '' ?>"
-                        id="row-<?= htmlspecialchars($rec['accessionId']) ?>"
-                        onclick="selectCompleted(<?= htmlspecialchars(json_encode($rec)) ?>)">
-                        <td class="px-4 py-3 font-mono font-bold text-[#1A507F]"><?= htmlspecialchars($rec['accessionId']) ?></td>
-                        <td class="px-4 py-3 text-gray-900 font-medium"><?= htmlspecialchars($rec['patientName']) ?></td>
-                        <td class="px-4 py-3 text-gray-500 font-mono"><?= htmlspecialchars($rec['dob']) ?></td>
-                        <td class="px-4 py-3 text-gray-700">
-                            <div class="font-medium"><?= htmlspecialchars($rec['testType']) ?></div>
-                            <div class="text-[10px] text-blue-800 font-semibold mt-0.5"><?= htmlspecialchars($rec['lab']) ?></div>
+                <tbody id="completed-records-body" class="divide-y divide-gray-100 select-none">
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-450 italic">
+                            Loading completed cases from database...
                         </td>
-                        <td class="px-4 py-3">
-                            <?php if ($isRejected): ?>
-                                <span class="bg-red-100 text-red-850 border border-red-200 px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wider">Rejected</span>
-                            <?php else: ?>
-                                <span class="bg-emerald-100 text-emerald-800 border border-emerald-250 px-2 py-0.5 rounded font-semibold text-[9px] inline-flex items-center gap-1">
-                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Approved
-                                        </span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-4 py-3 font-mono text-gray-500"><?= htmlspecialchars($rec['dateTime']) ?></td>
                     </tr>
-                <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
@@ -88,13 +62,13 @@ $activeRecord = $completedRecords[0];
 
             <div class="bg-white p-4 rounded border border-[#A5BACD] shadow-sm">
                 <h3 id="det-headline" class="font-extrabold text-[#111] text-[15px] border-b border-gray-150 pb-1.5 leading-tight">
-                    ACC-2026-0038: Farai Gumbo's Glycated Haemoglobin (HbA1c)
+                    Select a record
                 </h3>
                 <div class="mt-2 text-xs text-gray-700 space-y-1">
-                    <div><span class="text-gray-500 font-medium">Authorizing Scientist:</span> <span id="det-auth-scientist" class="font-bold text-[#12426F]">Dr. Chen</span></div>
-                    <div><span class="text-gray-500 font-medium">Lab Client Tenancy:</span> <span id="det-lab" class="font-bold text-blue-900">Apex Diagnostic Partners</span></div>
-                    <div><span class="text-gray-500 font-medium">DOB Address:</span> <span id="det-dob" class="font-semibold font-mono">1998-09-17</span></div>
-                    <div><span class="text-gray-500 font-medium">Authorized Time:</span> <span id="det-auth-time" class="font-semibold font-mono text-slate-800">16:10 PM</span></div>
+                    <div><span class="text-gray-500 font-medium">Authorizing Scientist:</span> <span id="det-auth-scientist" class="font-bold text-[#12426F]">-</span></div>
+                    <div><span class="text-gray-500 font-medium">Lab Client Tenancy:</span> <span id="det-lab" class="font-bold text-blue-900">-</span></div>
+                    <div><span class="text-gray-500 font-medium">DOB Address:</span> <span id="det-dob" class="font-semibold font-mono">-</span></div>
+                    <div><span class="text-gray-500 font-medium">Authorized Time:</span> <span id="det-auth-time" class="font-semibold font-mono text-slate-800">-</span></div>
                 </div>
             </div>
 
@@ -113,7 +87,7 @@ $activeRecord = $completedRecords[0];
                     </tr>
                     </thead>
                     <tbody id="det-params-body" class="divide-y divide-gray-100 font-medium">
-                    <!-- Injected dynamically -->
+                        <!-- Injected dynamically -->
                     </tbody>
                 </table>
             </div>
@@ -124,7 +98,7 @@ $activeRecord = $completedRecords[0];
                     <span>🔒</span> <span class="font-bold">Scientist Notes (Report Locked)</span>
                 </label>
                 <div id="det-notes" class="flex-1 p-2.5 bg-slate-50 border border-slate-200 text-xs italic text-gray-600 rounded select-none font-serif leading-relaxed">
-                    Glycated hemoglobin indicates stable glycemic management profile (Pre-diabetic threshold). No panic alerts requested.
+                    -
                 </div>
             </div>
 
@@ -148,9 +122,67 @@ $activeRecord = $completedRecords[0];
 
 <!-- Active interactive logic layer -->
 <script>
+    let completedRecords = [];
     let currentRecord = null;
 
+    async function loadCompletedRecords() {
+        try {
+            completedRecords = await API.getCompletedRecords();
+            
+            // Sync count badge
+            const countBadge = document.getElementById('completed-count-badge');
+            if (countBadge) {
+                countBadge.innerText = `${completedRecords.length} completed`;
+            }
+            
+            const tbody = document.getElementById('completed-records-body');
+            tbody.innerHTML = '';
+            
+            if (completedRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400 italic">No completed diagnostic files.</td></tr>';
+                clearDetails();
+                return;
+            }
+            
+            completedRecords.forEach((rec, idx) => {
+                const isRejected = rec.status === 'Rejected';
+                
+                let badge = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-250 px-2 py-0.5 rounded font-semibold text-[9px] inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Approved</span>`;
+                if (isRejected) {
+                    badge = `<span class="bg-red-100 text-red-850 border border-red-200 px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wider">Rejected</span>`;
+                }
+                
+                const row = document.createElement('tr');
+                row.id = `row-${rec.accessionId}`;
+                row.className = `cursor-pointer transition-all patient-row`;
+                row.addEventListener('click', () => selectCompleted(rec));
+                
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-mono font-bold text-[#1A507F]">${rec.accessionId}</td>
+                    <td class="px-4 py-3 text-gray-900 font-medium">${rec.patientName}</td>
+                    <td class="px-4 py-3 text-gray-500 font-mono">${rec.dob}</td>
+                    <td class="px-4 py-3 text-gray-700">
+                        <div class="font-medium">${rec.testType}</div>
+                        <div class="text-[10px] text-blue-800 font-semibold mt-0.5">${rec.lab}</div>
+                    </td>
+                    <td class="px-4 py-3">${badge}</td>
+                    <td class="px-4 py-3 font-mono text-gray-500">${rec.dateTime}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            selectCompleted(completedRecords[0]);
+        } catch (e) {
+            console.error("Failed to load completed records:", e);
+            document.getElementById('completed-records-body').innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-500 font-bold">Failed to load records from LIS API.</td></tr>`;
+        }
+    }
+
     function selectCompleted(record) {
+        if (!record) {
+            clearDetails();
+            return;
+        }
         currentRecord = record;
 
         // Highlight Row
@@ -188,15 +220,26 @@ $activeRecord = $completedRecords[0];
         });
     }
 
+    function clearDetails() {
+        currentRecord = null;
+        document.getElementById('det-headline').innerText = 'No Record Selected';
+        document.getElementById('det-auth-scientist').innerText = '-';
+        document.getElementById('det-lab').innerText = '-';
+        document.getElementById('det-dob').innerText = '-';
+        document.getElementById('det-auth-time').innerText = '-';
+        document.getElementById('det-notes').innerText = '-';
+        document.getElementById('det-params-body').innerHTML = '<tr><td colspan="4" class="px-3.5 py-4 text-center text-gray-400 italic">No parameters available</td></tr>';
+    }
+
     function triggerPrint() {
         if(!currentRecord) return;
         alert(`Clinical Dispatcher: Sent verification package for patient ${currentRecord.patientName} (Accession # ${currentRecord.accessionId}) to local laboratory printer sequence.`);
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const initialRec = <?= json_encode($completedRecords[0]) ?>;
-        selectCompleted(initialRec);
-    });
+    // Initialize with first completed record
+    (function() {
+        loadCompletedRecords();
+    })();
 </script>
 </body>
 </html>

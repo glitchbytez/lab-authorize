@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons Library via web script -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- API Client JS -->
+    <script src="api.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
         body { font-family: 'Inter', sans-serif; }
