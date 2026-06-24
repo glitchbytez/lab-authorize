@@ -1,6 +1,3 @@
-<?php
-require_once 'data.php';
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,9 +22,9 @@ require_once 'data.php';
             <h2 class="font-bold text-gray-800 text-[16px]">
                 Authorization Queue (Pending Reviews)
             </h2>
-            <span class="text-xs bg-[#E1EDF4] text-[#12426F] font-bold px-2 rounded-full py-0.5">
-                    <?= count($pendingRecords) ?> records found
-                </span>
+            <span id="pending-count-badge" class="text-xs bg-[#E1EDF4] text-[#12426F] font-bold px-2 rounded-full py-0.5">
+                0 records found
+            </span>
         </div>
 
         <div class="flex-1 overflow-auto">
@@ -42,32 +39,12 @@ require_once 'data.php';
                     <th class="px-4 py-3">Date/Time</th>
                 </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100 select-none">
-                <?php foreach ($pendingRecords as $idx => $rec):
-                    $isUrgent = in_array($rec['status'], ['Urgent', 'Critical']);
-                    ?>
-                    <tr class="cursor-pointer transition-all hover:bg-slate-50 patient-row <?= $idx === 0 ? 'bg-[#E3EFF7] border-y border-[#3483C2] font-semibold text-blue-950 shadow-inner' : '' ?>"
-                        id="row-<?= htmlspecialchars($rec['accessionId']) ?>"
-                        onclick="selectRecord(<?= htmlspecialchars(json_encode($rec)) ?>)">
-                        <td class="px-4 py-3 font-mono font-bold text-[#1A507F]"><?= htmlspecialchars($rec['accessionId']) ?></td>
-                        <td class="px-4 py-3 text-gray-900 font-medium"><?= htmlspecialchars($rec['patientName']) ?></td>
-                        <td class="px-4 py-3 text-gray-500 font-mono"><?= htmlspecialchars($rec['dob']) ?></td>
-                        <td class="px-4 py-3 text-gray-700">
-                            <div class="font-medium"><?= htmlspecialchars($rec['testType']) ?></div>
-                            <div class="text-[10px] text-blue-800 font-semibold mt-0.5"><?= htmlspecialchars($rec['lab'] ?? 'Default Lab') ?></div>
+                <tbody id="pending-records-body" class="divide-y divide-gray-100 select-none">
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-gray-450 italic">
+                            Loading pending cases from database...
                         </td>
-                        <td class="px-4 py-3">
-                            <?php if ($rec['status'] === 'Urgent'): ?>
-                                <span class="bg-[#FEF6C9] text-[#713F12] border border-[#FDE047] px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wider">Urgent</span>
-                            <?php elseif ($rec['status'] === 'Critical'): ?>
-                                <span class="bg-[#FEE2E2] text-[#991B1B] border border-[#FCA5A5] px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wider animate-pulse">Critical</span>
-                            <?php else: ?>
-                                <span class="bg-slate-100 text-gray-700 border border-slate-200 px-2 py-0.5 rounded font-bold text-[9px]">Routine</span>
-                            <?php endif; ?>
-                        </td>
-                        <td class="px-4 py-3 font-mono text-gray-500"><?= htmlspecialchars($rec['dateTime']) ?></td>
                     </tr>
-                <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
@@ -81,13 +58,13 @@ require_once 'data.php';
             <!-- Patient Metadata Information Card -->
             <div class="bg-white p-4 rounded border border-[#A5BACD] shadow-sm">
                 <h3 id="det-headline" class="font-extrabold text-[#111] text-[15px] border-b border-gray-100 pb-1.5 leading-tight">
-                    ACC-2026-0041: Oliver Mwanga's Full Blood Count
+                    Select a record
                 </h3>
                 <div class="mt-2 text-xs text-gray-700 space-y-1">
-                    <div><span class="text-gray-500 font-medium font-sans">Ordering Physician:</span> <span id="det-physician" class="font-bold">Dr. E. Thompson</span></div>
-                    <div><span class="text-gray-500 font-medium font-sans">Lab Client Tenancy:</span> <span id="det-lab" class="font-bold text-blue-900">Downtown Medical Center</span></div>
-                    <div><span class="text-gray-500 font-medium font-sans">DOB Address:</span> <span id="det-dob" class="font-semibold font-mono">1991-04-12</span></div>
-                    <div><span class="text-gray-500 font-medium font-sans">Received Date/Time:</span> <span id="det-received" class="font-semibold font-mono">2026-06-23 08:14</span></div>
+                    <div><span class="text-gray-500 font-medium font-sans">Ordering Physician:</span> <span id="det-physician" class="font-bold">-</span></div>
+                    <div><span class="text-gray-500 font-medium font-sans">Lab Client Tenancy:</span> <span id="det-lab" class="font-bold text-blue-900">-</span></div>
+                    <div><span class="text-gray-500 font-medium font-sans">DOB Address:</span> <span id="det-dob" class="font-semibold font-mono">-</span></div>
+                    <div><span class="text-gray-500 font-medium font-sans">Received Date/Time:</span> <span id="det-received" class="font-semibold font-mono">-</span></div>
                 </div>
             </div>
 
@@ -106,7 +83,7 @@ require_once 'data.php';
                     </tr>
                     </thead>
                     <tbody id="det-params-body" class="divide-y divide-gray-100 select-none">
-                    <!-- Dynamic Injection -->
+                        <!-- Dynamic Injection -->
                     </tbody>
                 </table>
             </div>
@@ -144,9 +121,76 @@ require_once 'data.php';
 
 <!-- Active interactive logic layer -->
 <script>
+    let pendingRecords = [];
     let currentRecord = null;
 
+    async function loadPendingRecords() {
+        try {
+            pendingRecords = await API.getPendingRecords();
+            
+            // Sync count badge
+            const countBadge = document.getElementById('pending-count-badge');
+            if (countBadge) {
+                countBadge.innerText = `${pendingRecords.length} records found`;
+            }
+            
+            const tbody = document.getElementById('pending-records-body');
+            tbody.innerHTML = '';
+            
+            if (pendingRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400 italic">No pending authorization requests.</td></tr>';
+                clearDetails();
+                return;
+            }
+            
+            pendingRecords.forEach((rec, idx) => {
+                const isUrgent = rec.status === 'Urgent';
+                const isCritical = rec.status === 'Critical';
+                
+                let badge = `<span class="bg-slate-100 text-gray-700 border border-slate-200 px-2 py-0.5 rounded font-bold text-[9px]">Routine</span>`;
+                if (isUrgent) {
+                    badge = `<span class="bg-[#FEF6C9] text-[#713F12] border border-[#FDE047] px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wider">Urgent</span>`;
+                } else if (isCritical) {
+                    badge = `<span class="bg-[#FEE2E2] text-[#991B1B] border border-[#FCA5A5] px-2 py-0.5 rounded font-bold text-[9px] uppercase tracking-wider animate-pulse">Critical</span>`;
+                }
+                
+                const row = document.createElement('tr');
+                row.id = `row-${rec.accessionId}`;
+                row.className = `cursor-pointer transition-all hover:bg-slate-50 patient-row`;
+                row.addEventListener('click', () => selectRecord(rec));
+                
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-mono font-bold text-[#1A507F]">${rec.accessionId}</td>
+                    <td class="px-4 py-3 text-gray-900 font-medium">${rec.patientName}</td>
+                    <td class="px-4 py-3 text-gray-500 font-mono">${rec.dob}</td>
+                    <td class="px-4 py-3 text-gray-700">
+                        <div class="font-medium">${rec.testType}</div>
+                        <div class="text-[10px] text-blue-800 font-semibold mt-0.5">${rec.lab || 'Default Lab'}</div>
+                    </td>
+                    <td class="px-4 py-3">${badge}</td>
+                    <td class="px-4 py-3 font-mono text-gray-500">${rec.dateTime}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Default selection: select the first record or re-select the current one if it still exists
+            let toSelect = pendingRecords[0];
+            if (currentRecord) {
+                const stillExists = pendingRecords.find(r => r.accessionId === currentRecord.accessionId);
+                if (stillExists) toSelect = stillExists;
+            }
+            selectRecord(toSelect);
+        } catch (e) {
+            console.error("Failed to load records:", e);
+            document.getElementById('pending-records-body').innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-red-500 font-bold">Failed to load records from LIS API.</td></tr>`;
+        }
+    }
+
     function selectRecord(record) {
+        if (!record) {
+            clearDetails();
+            return;
+        }
         currentRecord = record;
 
         // Highlight Row
@@ -186,14 +230,44 @@ require_once 'data.php';
         });
     }
 
-    function triggerVerify() {
-        if(!currentRecord) return;
-        showToast(`Accession ${currentRecord.accessionId} verified & authorized clinical release!`);
+    function clearDetails() {
+        currentRecord = null;
+        document.getElementById('det-headline').innerText = 'No Record Selected';
+        document.getElementById('det-physician').innerText = '-';
+        document.getElementById('det-lab').innerText = '-';
+        document.getElementById('det-dob').innerText = '-';
+        document.getElementById('det-received').innerText = '-';
+        document.getElementById('det-notes').value = '';
+        document.getElementById('det-params-body').innerHTML = '<tr><td colspan="4" class="px-3.5 py-4 text-center text-gray-400 italic">No parameters available</td></tr>';
     }
 
-    function triggerAction(actionName) {
-        if(!currentRecord) return;
-        showToast(`Action [${actionName}] applied to ${currentRecord.accessionId}.`);
+    async function triggerVerify() {
+        if (!currentRecord) return;
+        try {
+            const notes = document.getElementById('det-notes').value;
+            const res = await API.verifyRecord(currentRecord.accessionId, notes);
+            showToast(res.success || `Accession ${currentRecord.accessionId} verified & authorized!`);
+            await loadPendingRecords();
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
+    }
+
+    async function triggerAction(actionName) {
+        if (!currentRecord) return;
+        try {
+            const notes = document.getElementById('det-notes').value;
+            let res;
+            if (actionName === 'Rejected') {
+                res = await API.rejectRecord(currentRecord.accessionId, notes);
+            } else if (actionName === 'Recheck') {
+                res = await API.recheckRecord(currentRecord.accessionId, notes);
+            }
+            showToast(res.success || `Action [${actionName}] applied.`);
+            await loadPendingRecords();
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
     }
 
     function showToast(message) {
@@ -204,10 +278,9 @@ require_once 'data.php';
     }
 
     // Initialize with first diagnostic row
-    document.addEventListener('DOMContentLoaded', () => {
-        const firstRec = <?= json_encode($pendingRecords[0]) ?>;
-        selectRecord(firstRec);
-    });
+    (function() {
+        loadPendingRecords();
+    })();
 </script>
 </body>
 </html>
