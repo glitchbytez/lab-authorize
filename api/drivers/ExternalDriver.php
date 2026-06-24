@@ -13,14 +13,16 @@ class ExternalDriver implements ApiContract
 
     // ── Records ──────────────────────────────────────────────────────────
 
-    public function getPendingRecords(): array
+    public function getPendingRecords(?string $labFilter = null): array
     {
-        return $this->request('/records/pending');
+        $qs = $labFilter !== null ? '?lab=' . urlencode($labFilter) : '';
+        return $this->request('/records/pending' . $qs);
     }
 
-    public function getCompletedRecords(): array
+    public function getCompletedRecords(?string $labFilter = null): array
     {
-        return $this->request('/records/completed');
+        $qs = $labFilter !== null ? '?lab=' . urlencode($labFilter) : '';
+        return $this->request('/records/completed' . $qs);
     }
 
     public function verifyRecord(string $accessionId, string $notes, string $scientist): array

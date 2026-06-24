@@ -5,9 +5,13 @@ class DatabaseDriver implements ApiContract
 {
     // ── Records ──────────────────────────────────────────────────────────
 
-    public function getPendingRecords(): array
+    public function getPendingRecords(?string $labFilter = null): array
     {
-        $stmt = Database::getInstance()->query("
+        [$where, $params] = $this->recordsWhere(
+            "r.status NOT IN ('Approved', 'Rejected')", $labFilter
+        );
+
+        $stmt = Database::getInstance()->prepare("
             SELECT
                 r.accession_id       AS accessionId,
                 r.patient_name       AS patientName,
@@ -25,15 +29,20 @@ class DatabaseDriver implements ApiContract
                 p.flag
             FROM records r
             LEFT JOIN record_parameters p ON p.record_id = r.id
-            WHERE r.status NOT IN ('Approved', 'Rejected')
+            WHERE {$where}
             ORDER BY r.id, p.id
         ");
+        $stmt->execute($params);
         return $this->groupRecordsWithParameters($stmt->fetchAll());
     }
 
-    public function getCompletedRecords(): array
+    public function getCompletedRecords(?string $labFilter = null): array
     {
-        $stmt = Database::getInstance()->query("
+        [$where, $params] = $this->recordsWhere(
+            "r.status IN ('Approved', 'Rejected')", $labFilter
+        );
+
+        $stmt = Database::getInstance()->prepare("
             SELECT
                 r.accession_id         AS accessionId,
                 r.patient_name         AS patientName,
@@ -53,9 +62,10 @@ class DatabaseDriver implements ApiContract
                 p.flag
             FROM records r
             LEFT JOIN record_parameters p ON p.record_id = r.id
-            WHERE r.status IN ('Approved', 'Rejected')
+            WHERE {$where}
             ORDER BY r.id DESC, p.id
         ");
+        $stmt->execute($params);
         return $this->groupRecordsWithParameters($stmt->fetchAll());
     }
 
@@ -211,6 +221,18 @@ class DatabaseDriver implements ApiContract
     }
 
     // ── Private helpers ──────────────────────────────────────────────────
+
+    /**
+     * Builds the WHERE clause and bound params for record queries.
+     * When $labFilter is set, results are scoped to that lab only.
+     */
+    private function recordsWhere(string $statusClause, ?string $labFilter): array
+    {
+        if ($labFilter === null) {
+            return [$statusClause, []];
+        }
+        return ["{$statusClause} AND r.lab_name = ?", [$labFilter]];
+    }
 
     private function groupRecordsWithParameters(array $rows): array
     {
