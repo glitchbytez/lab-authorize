@@ -1,6 +1,6 @@
 # LIS Authorization Portal
 
-A multi-tenant Laboratory Information System (LIS) authorization portal for Zimbabwe. Lab scientists review and authorize diagnostic records from their assigned facility; administrators manage labs and users system-wide.
+A multi-tenant Laboratory Information System (LIS) authorization portal. Lab scientists review and authorize diagnostic records from their assigned facility; administrators manage labs and users system-wide.
 
 ## Stack
 
