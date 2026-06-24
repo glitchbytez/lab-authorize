@@ -91,8 +91,7 @@
                     <button onclick="triggerAction('Rejected')" class="bg-white py-2.5 px-3 rounded font-medium text-gray-750 border border-[#A5BACD] hover:bg-red-50 hover:text-red-700 hover:border-red-400">Reject</button>
                     <button onclick="triggerAction('Recheck')" class="bg-white py-2.5 px-3 rounded font-medium text-gray-750 border border-[#A5BACD] hover:bg-amber-50 hover:text-amber-700 hover:border-amber-400">Request Recheck</button>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <button onclick="alert('Viewing comments')" class="bg-white border border-[#A5BACD] hover:bg-slate-50 py-2.5 px-3 rounded font-semibold text-gray-700 text-center">View Comments</button>
+                <div class="grid grid-cols-1 gap-2 text-xs">
                     <button onclick="triggerVerify()" class="bg-[#12426F] hover:bg-[#1D5E9E] active:bg-[#07213A] text-white py-2.5 px-3 rounded font-bold flex items-center justify-center space-x-2">
                         <span>Verify & Authorize</span>
                     </button>

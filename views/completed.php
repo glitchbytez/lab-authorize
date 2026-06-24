@@ -93,10 +93,9 @@
                     <button disabled class="bg-slate-100 border border-slate-200 text-slate-400 py-2.5 px-3 rounded font-medium text-center cursor-not-allowed">Reject (Locked)</button>
                     <button disabled class="bg-slate-100 border border-slate-200 text-slate-400 py-2.5 px-3 rounded font-medium text-center cursor-not-allowed">Request Recheck (Locked)</button>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <button onclick="alert('Review baseline comment archives completed')" class="bg-white border border-[#A5BACD] hover:bg-slate-50 py-2.5 px-3 rounded font-semibold text-gray-750">View Comments</button>
+                <div class="grid grid-cols-1 gap-2 text-xs">
                     <button onclick="triggerPrint()" class="bg-[#12426F] hover:bg-[#1D5E9E] text-white py-2.5 px-3 rounded font-bold flex items-center justify-center space-x-1.5 shadow">
-                        <span>Print Authorized Report 🖨️</span>
+                        <span>Print Authorized Report</span>
                     </button>
                 </div>
             </div>
@@ -217,8 +216,8 @@
     }
 
     function triggerPrint() {
-        if(!currentRecord) return;
-        alert(`Clinical Dispatcher: Sent verification package for patient ${currentRecord.patientName} (Accession # ${currentRecord.accessionId}) to local laboratory printer sequence.`);
+        if (!currentRecord) return;
+        window.print();
     }
 
     // Initialize with first completed record

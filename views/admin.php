@@ -138,7 +138,7 @@
                 <div class="space-y-1">
                     <label class="text-[10px] uppercase font-bold text-gray-500 block">Access Key / Password</label>
                     <input
-                        type="text"
+                        type="password"
                         name="password"
                         id="form-user-password"
                         placeholder="Enter password..."
@@ -168,7 +168,6 @@
                     <th class="px-5 py-3">Full Name</th>
                     <th class="px-5 py-3">Role</th>
                     <th class="px-5 py-3">Assigned Lab Facility</th>
-                    <th class="px-5 py-3 text-center">Password</th>
                     <th class="px-5 py-3 text-center w-24">Actions</th>
                 </tr>
                 </thead>
@@ -284,7 +283,7 @@
         tbody.innerHTML = '';
 
         if (allUsers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-6 text-center text-gray-450 italic">No rostered personnel accounts.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="px-5 py-6 text-center text-gray-450 italic">No rostered personnel accounts.</td></tr>';
             return;
         }
 
@@ -318,11 +317,6 @@
                 </td>
                 <td class="px-5 py-3.5 font-medium text-gray-700">
                     ${facilityInfo}
-                </td>
-                <td class="px-5 py-3.5 text-center">
-                    <span class="font-mono bg-slate-100 rounded px-2 py-0.5 text-slate-600 select-all" title="Click to select password">
-                        ${escapeHtml(sc.password)}
-                    </span>
                 </td>
                 <td class="px-5 py-3.5 text-center">
                     <button
