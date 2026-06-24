@@ -27,9 +27,11 @@ function apiSuccess(array $data): void
 // ── GET — resource fetching ───────────────────────────────────────────────
 if ($method === 'GET') {
     try {
+        $userLab = Auth::currentUser()['lab'] ?? null;
+
         switch ($resource) {
-            case 'pending':   apiSuccess($api->getPendingRecords());
-            case 'completed': apiSuccess($api->getCompletedRecords());
+            case 'pending':   apiSuccess($api->getPendingRecords($userLab));
+            case 'completed': apiSuccess($api->getCompletedRecords($userLab));
             case 'labs':      apiSuccess($api->getLabs());
             case 'users':     apiSuccess($api->getUsers());
             default:          apiError("Unknown resource '{$resource}'.");

@@ -1,9 +1,9 @@
 <?php
 interface ApiContract
 {
-    // Records
-    public function getPendingRecords(): array;
-    public function getCompletedRecords(): array;
+    // Records — pass a lab name to scope results to that lab, null returns all
+    public function getPendingRecords(?string $labFilter = null): array;
+    public function getCompletedRecords(?string $labFilter = null): array;
     public function verifyRecord(string $accessionId, string $notes, string $scientist): array;
     public function rejectRecord(string $accessionId, string $notes, string $scientist): array;
     public function recheckRecord(string $accessionId, string $notes): array;
