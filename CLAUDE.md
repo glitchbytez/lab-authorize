@@ -4,66 +4,83 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running the app
 
-No build step — serve directly with PHP's built-in server:
+No build step. Serve with PHP's built-in server:
 
 ```bash
 php -S localhost:8000
 ```
 
-Then open `http://localhost:8000/index.php`. There is no Composer, no npm, and no test suite.
+Before starting, copy `.env.example` to `.env` and fill in your database credentials, then run:
 
-Default credentials (defined in `config.php`):
+```bash
+mysql -u root -p < db/schema.sql
+mysql -u root -p lis_gateway < db/seed.sql
+```
+
+Default credentials (from seed):
 - Admin: `admin-01` / `admin123`
 - Scientist: `S. Sibanda` / `password123`
 
 ## Architecture
 
-This is a multi-tenant Laboratory Information System (LIS) authorization portal for Zimbabwe. All state lives in `$_SESSION` — there is no database.
+A multi-tenant Laboratory Information System (LIS) authorization portal for Zimbabwe.
+Database is MySQL/MariaDB accessed via PDO. All credentials come from `.env` (never hard-coded).
 
 ### Request flow
 
-There are two parallel entry points that share the same session:
+Two entry points share the same session:
 
-1. **Traditional form-POST MVC** (`index.php`): handles login, logout, and admin CRUD via `$_POST`. Includes partial PHP views from `views/` and assembles the full page layout with `header.php` and `sidebar.php`. Also contains the SPA navigation layer (a `fetch`-based JS listener that swaps `<main>` content without full-page reloads).
+1. **`index.php`** — traditional form-POST MVC. Handles login and (as a fallback) admin CRUD. Includes partial PHP views from `views/` assembled with `header.php` and `sidebar.php`. Also contains the SPA navigation layer: a `fetch`-based JS listener that swaps `<main>` content without full-page reloads.
 
-2. **JSON API gateway** (`api.php`): the endpoint that the browser's JavaScript calls via `api.js`. Validates the session, then delegates every read and mutation to `ApiClient.php`. Returns JSON only.
+2. **`api/index.php`** — JSON gateway. The browser's JS (`api.js`) calls this exclusively for all data operations. It delegates every request to `ApiClient::make()`.
 
-### ApiClient.php — BFF with mock mode
+### Driver pattern (`api/`)
 
-`ApiClient` is the Backend-for-Frontend layer. The `USE_MOCK` constant (top of the class) controls whether calls go to `$_SESSION` (mock, current default) or are forwarded to a real LIS API via cURL.
+The entire backend is abstracted behind `api/contracts/ApiContract.php`. Switching backend requires one `.env` change:
 
-To switch to a real API:
-1. Set `USE_MOCK = false`
-2. Set `API_BASE_URL` to the real endpoint
-3. Set `API_KEY` to the bearer token
+```
+API_DRIVER=database   # uses DatabaseDriver — PDO against local MySQL
+API_DRIVER=external   # uses ExternalDriver — cURL against a third-party LIS API
+```
 
-The browser never sees the API key — `api.php` is the only caller of `ApiClient`.
+```
+api/
+├── index.php               # Router (GET ?resource=, POST ?action=)
+├── bootstrap.php           # Requires all api/ classes in order
+├── config.php              # env() helper — reads .env with system env fallback
+├── Database.php            # PDO singleton
+├── Auth.php                # Session guard (requireLogin / currentUser)
+├── ApiClient.php           # Factory: ApiClient::make() → ApiContract instance
+├── contracts/
+│   └── ApiContract.php     # Interface all drivers must satisfy
+└── drivers/
+    ├── DatabaseDriver.php  # PDO implementation
+    └── ExternalDriver.php  # cURL implementation
+```
 
-### Session data keys
+To adopt an external API: set `API_DRIVER=external` + `EXTERNAL_API_URL` + `EXTERNAL_API_KEY` in `.env`. No PHP code changes required. If the external API's response shape differs from the contract, adapt inside `ExternalDriver` only.
 
-| Key | Contents |
-|---|---|
-| `$_SESSION['user']` | Logged-in user object (`id`, `name`, `role`, `lab`) |
-| `$_SESSION['client_labs']` | Registered facility laboratories |
-| `$_SESSION['scientists']` | All user accounts |
-| `$_SESSION['pending_records']` | Records awaiting authorization |
-| `$_SESSION['completed_records']` | Approved / rejected records |
+### API surface
 
-### Pages and roles
+- `GET  api/index.php?resource=pending|completed|labs|users`
+- `POST api/index.php?action=create_lab|delete_lab|create_user|delete_user|verify_record|reject_record|recheck_record`
+
+`api.js` wraps every call. Throws on `data.error`.
+
+### Session
+
+`$_SESSION['user']` holds the logged-in user (`id`, `name`, `role`, `lab`). Login always authenticates against the local `users` table with `password_verify()`, regardless of `API_DRIVER`. The DB is not queried on every request.
+
+### Pages and role-gating
 
 | URL | View | Access |
 |---|---|---|
 | `?page=pending` | Authorization queue | All logged-in users |
 | `?page=completed` | Released reports | All logged-in users |
-| `?page=admin` | System management (labs + users) | `Administrator` or `LIS Manager` role only |
+| `?page=admin` | System management | `Administrator` or `LIS Manager` only |
 
-### API surface (`api.php`)
+`views/admin.php` manages labs and users entirely through `api.js` — the form-POST handlers in `index.php` for those actions exist as a fallback only.
 
-- `GET ?resource=pending|completed|labs|users`
-- `POST ?action=create_lab|delete_lab|create_user|delete_user|verify_record|reject_record|recheck_record`
+### Database schema
 
-The JavaScript client in `api.js` wraps every call and throws on `data.error`.
-
-### Stale file
-
-`data.php` is a leftover static array file that is no longer included anywhere. It has been superseded by `config.php`, which seeds the same data into `$_SESSION` on first request.
+Four tables: `labs`, `users`, `records`, `record_parameters`. See `db/schema.sql`. `record_parameters` normalizes the per-record test parameters and cascades deletes from `records`. All passwords are bcrypt via `PASSWORD_BCRYPT`.

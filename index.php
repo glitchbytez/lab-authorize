@@ -1,5 +1,6 @@
 <?php
 require_once 'config.php';
+require_once 'api/bootstrap.php';
 
 // Route Handlers and Administrative Actions
 $error = '';
@@ -7,122 +8,81 @@ $success = '';
 
 // A. Handle Form POSTs
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. Authenticate login
-    if (isset($_POST['action']) && $_POST['action'] === 'login') {
-        $username = trim($_POST['username']);
-        $password = trim($_POST['password']);
+    $action = $_POST['action'] ?? '';
 
-        foreach ($_SESSION['scientists'] as $sc) {
-            if (strtolower($sc['name']) === strtolower($username) || strtolower($sc['id']) === strtolower($username)) {
-                if ($sc['password'] === $password) {
-                    $_SESSION['user'] = $sc;
-                    header("Location: index.php?page=pending");
-                    exit;
-                }
+    // 1. Authenticate login — always uses local DB regardless of API_DRIVER
+    if ($action === 'login') {
+        $username = trim($_POST['username'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+
+        try {
+            $pdo  = Database::getInstance();
+            $stmt = $pdo->prepare("SELECT * FROM users WHERE LOWER(name) = LOWER(?) OR LOWER(id) = LOWER(?)");
+            $stmt->execute([$username, $username]);
+            $user = $stmt->fetch();
+
+            if ($user && password_verify($password, $user['password_hash'])) {
+                $user['lab'] = $user['lab_name'];
+                unset($user['password_hash'], $user['lab_name'], $user['created_at']);
+                $_SESSION['user'] = $user;
+                header("Location: index.php?page=pending");
+                exit;
             }
+        } catch (Throwable $e) {
+            $error = 'System error during authentication. Please try again.';
         }
-        $error = 'Authentication denied. Incorrect credentials supplied.';
-    }
 
-    // 2. Register new facility with optional AHFOZ Number
-    if (isset($_POST['action']) && $_POST['action'] === 'create_lab') {
-        $labName = trim($_POST['lab_name']);
-        $ahfoz = trim($_POST['ahfoz_number']);
-
-        if (empty($labName)) {
-            $error = 'Please enter a valid laboratory name.';
-        } else {
-            // Check uniqueness
-            $exists = false;
-            foreach ($_SESSION['client_labs'] as $lab) {
-                if (strtolower($lab['name']) === strtolower($labName)) {
-                    $exists = true;
-                    break;
-                }
-            }
-            if ($exists) {
-                $error = "Client Laboratory '{$labName}' is already registered.";
-            } else {
-                $_SESSION['client_labs'][] = [
-                    'name' => $labName,
-                    'ahfoz' => !empty($ahfoz) ? $ahfoz : null
-                ];
-                $success = "Facility successfully authorized and listed under Zimbabwe Health Service.";
-            }
+        if (empty($error)) {
+            $error = 'Authentication denied. Incorrect credentials supplied.';
         }
     }
 
-    // 3. Decommission / Delete facility
-    if (isset($_POST['action']) && $_POST['action'] === 'delete_lab') {
-        $labName = $_POST['lab_name'];
-        if (getLabSpecialistsCount($labName) > 0) {
-            $error = "Cannot decommission '{$labName}' when active specialists are rostered.";
-        } else {
-            $_SESSION['client_labs'] = array_filter($_SESSION['client_labs'], function($l) use ($labName) {
-                return $l['name'] !== $labName;
-            });
-            // Re-index array
-            $_SESSION['client_labs'] = array_values($_SESSION['client_labs']);
-            $success = "Client decommissioned successfully.";
-        }
-    }
+    // 2–5. CRUD actions — delegated to the active driver
+    // (admin.php handles these via api.js; these handlers exist as a fallback)
+    if (in_array($action, ['create_lab', 'delete_lab', 'create_user', 'delete_user'])) {
+        $api = ApiClient::make();
 
-    // 4. Create new user account
-    if (isset($_POST['action']) && $_POST['action'] === 'create_user') {
-        $name = trim($_POST['name']);
-        $role = trim($_POST['role']);
-        $lab = trim($_POST['lab']);
-        $password = trim($_POST['password']);
-
-        if (empty($name) || empty($role) || empty($password)) {
-            $error = 'All fields (Name, Role, Password) are required.';
-        } else {
-            // Check uniqueness of name
-            $exists = false;
-            foreach ($_SESSION['scientists'] as $sc) {
-                if (strtolower($sc['name']) === strtolower($name)) {
-                    $exists = true;
-                    break;
-                }
-            }
-            if ($exists) {
-                $error = "A specialist named '{$name}' is already rostered.";
-            } else {
-                // Generate a unique ID
-                $maxIdNum = 0;
-                foreach ($_SESSION['scientists'] as $sc) {
-                    if (preg_match('/(?:scientist|admin|user)-(\d+)/', $sc['id'], $matches)) {
-                        $num = (int)$matches[1];
-                        if ($num > $maxIdNum) {
-                            $maxIdNum = $num;
-                        }
+        try {
+            switch ($action) {
+                case 'create_lab':
+                    $labName = trim($_POST['lab_name'] ?? '');
+                    if (empty($labName)) {
+                        $error = 'Please enter a valid laboratory name.';
+                    } else {
+                        $result  = $api->createLab($labName, trim($_POST['ahfoz_number'] ?? '') ?: null);
+                        $success = $result['success'];
                     }
-                }
-                $newId = 'user-' . sprintf('%02d', $maxIdNum + 1);
-                
-                $_SESSION['scientists'][] = [
-                    'id' => $newId,
-                    'name' => $name,
-                    'role' => $role,
-                    'lab' => ($lab === '' || $lab === 'None') ? null : $lab,
-                    'password' => $password
-                ];
-                $success = "User account successfully registered and active.";
-            }
-        }
-    }
+                    break;
 
-    // 5. Delete user account
-    if (isset($_POST['action']) && $_POST['action'] === 'delete_user') {
-        $userId = $_POST['user_id'];
-        if ($_SESSION['user']['id'] === $userId) {
-            $error = "Security Policy Violation: You cannot delete your own active profile.";
-        } else {
-            $_SESSION['scientists'] = array_filter($_SESSION['scientists'], function($sc) use ($userId) {
-                return $sc['id'] !== $userId;
-            });
-            $_SESSION['scientists'] = array_values($_SESSION['scientists']);
-            $success = "User account decommissioned successfully.";
+                case 'delete_lab':
+                    $result  = $api->deleteLab(trim($_POST['lab_name'] ?? ''));
+                    $success = $result['success'];
+                    break;
+
+                case 'create_user':
+                    $name     = trim($_POST['name']     ?? '');
+                    $role     = trim($_POST['role']      ?? '');
+                    $password = trim($_POST['password']  ?? '');
+                    if (empty($name) || empty($role) || empty($password)) {
+                        $error = 'All fields (Name, Role, Password) are required.';
+                    } else {
+                        $result  = $api->createUser($name, $role, trim($_POST['lab'] ?? '') ?: null, $password);
+                        $success = $result['success'];
+                    }
+                    break;
+
+                case 'delete_user':
+                    $userId = trim($_POST['user_id'] ?? '');
+                    if ($_SESSION['user']['id'] === $userId) {
+                        $error = "Security Policy Violation: You cannot delete your own active profile.";
+                    } else {
+                        $result  = $api->deleteUser($userId);
+                        $success = $result['success'];
+                    }
+                    break;
+            }
+        } catch (Throwable $e) {
+            $error = $e->getMessage();
         }
     }
 }

@@ -2,32 +2,32 @@
 const API = {
     // GET requests
     async getPendingRecords() {
-        const res = await fetch('api.php?resource=pending');
+        const res = await fetch('api/index.php?resource=pending');
         if (!res.ok) throw new Error(await res.text());
         return res.json();
     },
 
     async getCompletedRecords() {
-        const res = await fetch('api.php?resource=completed');
+        const res = await fetch('api/index.php?resource=completed');
         if (!res.ok) throw new Error(await res.text());
         return res.json();
     },
 
     async getLabs() {
-        const res = await fetch('api.php?resource=labs');
+        const res = await fetch('api/index.php?resource=labs');
         if (!res.ok) throw new Error(await res.text());
         return res.json();
     },
 
     async getUsers() {
-        const res = await fetch('api.php?resource=users');
+        const res = await fetch('api/index.php?resource=users');
         if (!res.ok) throw new Error(await res.text());
         return res.json();
     },
 
     // POST requests
     async createLab(labName, ahfozNumber) {
-        const res = await fetch('api.php?action=create_lab', {
+        const res = await fetch('api/index.php?action=create_lab', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lab_name: labName, ahfoz_number: ahfozNumber })
@@ -38,7 +38,7 @@ const API = {
     },
 
     async deleteLab(labName) {
-        const res = await fetch('api.php?action=delete_lab', {
+        const res = await fetch('api/index.php?action=delete_lab', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ lab_name: labName })
@@ -49,7 +49,7 @@ const API = {
     },
 
     async createUser(name, role, lab, password) {
-        const res = await fetch('api.php?action=create_user', {
+        const res = await fetch('api/index.php?action=create_user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, role, lab, password })
@@ -60,7 +60,7 @@ const API = {
     },
 
     async deleteUser(userId) {
-        const res = await fetch('api.php?action=delete_user', {
+        const res = await fetch('api/index.php?action=delete_user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
@@ -71,7 +71,7 @@ const API = {
     },
 
     async verifyRecord(accessionId, scientistNotes) {
-        const res = await fetch('api.php?action=verify_record', {
+        const res = await fetch('api/index.php?action=verify_record', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessionId, scientistNotes })
@@ -82,7 +82,7 @@ const API = {
     },
 
     async rejectRecord(accessionId, scientistNotes) {
-        const res = await fetch('api.php?action=reject_record', {
+        const res = await fetch('api/index.php?action=reject_record', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessionId, scientistNotes })
@@ -93,7 +93,7 @@ const API = {
     },
 
     async recheckRecord(accessionId, scientistNotes) {
-        const res = await fetch('api.php?action=recheck_record', {
+        const res = await fetch('api/index.php?action=recheck_record', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ accessionId, scientistNotes })
