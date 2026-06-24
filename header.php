@@ -24,8 +24,8 @@
             <i data-lucide="activity" class="w-5 h-5 text-[#12426F]"></i>
         </div>
         <div>
-            <h1 class="text-sm font-bold text-gray-900 tracking-tight leading-none uppercase">Apex Laboratory Network</h1>
-            <p class="text-[10px] text-gray-500 font-semibold tracking-wider mt-0.5">Zimbabwe General Multitenant Gateway</p>
+            <h1 class="text-sm font-bold text-gray-900 tracking-tight leading-none uppercase">Lab Authorize</h1>
+            <p class="text-[10px] text-gray-500 font-semibold tracking-wider mt-0.5">General Multitenant Gateway</p>
         </div>
     </div>
 
